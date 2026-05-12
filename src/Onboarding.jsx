@@ -410,6 +410,3 @@ export default function Onboarding({ uid, onComplete }) {
 
   return null
 }
-
-return null
-}
