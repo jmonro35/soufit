@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from ‘react’
-import { collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc, setDoc, serverTimestamp } from ‘firebase/firestore’
-import { db } from ‘../firebase.js’
-import { uploadPhoto } from ‘../cloudinary.js’
-import { getWeekKey } from ‘../utils.js’
-import { Card, Label, Btn, RingProgress, G, BORD, MUT, DIM, mono, bebas } from ‘../ui.jsx’
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../firebase.js'
+import { uploadPhoto } from '../cloudinary.js'
+import { getWeekKey } from '../utils.js'
+import { Card, Label, Btn, RingProgress, G, BORD, MUT, DIM, mono, bebas } from '../ui.jsx'
 
 export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }) {
 const today    = new Date()
@@ -21,9 +21,9 @@ const [pasteHint, setPasteHint] = useState(false)
 
 useEffect(() => {
 const q = query(
-collection(db, ‘users’, uid, ‘workouts’),
-where(‘weekKey’, ‘==’, weekKey),
-orderBy(‘createdAt’, ‘desc’)
+collection(db, 'users', uid, 'workouts'),
+where('weekKey', '==', weekKey),
+orderBy('createdAt', 'desc')
 )
 const unsub = onSnapshot(q, snap => setRecent(snap.docs.map(d => ({ id: d.id, …d.data() }))))
 return () => unsub()
@@ -35,7 +35,7 @@ const handleGlobalPaste = e => {
 const items = e.clipboardData?.items
 if (!items) return
 for (const item of items) {
-if (item.type.startsWith(‘image/’)) {
+if (item.type.startsWith('image/')) {
 const blob = item.getAsFile()
 if (blob) {
 setPhoto(URL.createObjectURL(blob))
@@ -45,8 +45,8 @@ break
 }
 }
 }
-window.addEventListener(‘paste’, handleGlobalPaste)
-return () => window.removeEventListener(‘paste’, handleGlobalPaste)
+window.addEventListener('paste', handleGlobalPaste)
+return () => window.removeEventListener('paste', handleGlobalPaste)
 }, [])
 
 // File input fallback for mobile
@@ -66,23 +66,23 @@ if (photoBlob) {
 const result = await uploadPhoto(photoBlob)
 photoUrl = result.url
 }
-const days = [‘Mon’,‘Tue’,‘Wed’,‘Thu’,‘Fri’,‘Sat’,‘Sun’]
+const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 const updated = […workoutDays]
 updated[todayIdx] = true
 setWorkoutDays(updated)
-await addDoc(collection(db, ‘users’, uid, ‘workouts’), {
+await addDoc(collection(db, 'users', uid, 'workouts'), {
 type: selectedType, day: days[todayIdx], weekKey,
 photoUrl, createdAt: serverTimestamp(),
-date: today.toISOString().split(‘T’)[0],
+date: today.toISOString().split('T')[0],
 })
-await updateDoc(doc(db, ‘groups’, profile.groupCode, ‘members’, uid), {
+await updateDoc(doc(db, 'groups', profile.groupCode, 'members', uid), {
 workouts: updated.filter(Boolean).length
 })
-await setDoc(doc(db, ‘users’, uid, ‘weeklyWorkouts’, weekKey), { days: updated })
+await setDoc(doc(db, 'users', uid, 'weeklyWorkouts', weekKey), { days: updated })
 setLogged(true); setPhoto(null); setBlob(null); setType(null)
 setTimeout(() => setLogged(false), 4000)
 } catch (e) {
-alert(‘Error logging workout. Check your connection and try again.’)
+alert('Error logging workout. Check your connection and try again.')
 }
 setUploading(false)
 }
@@ -90,14 +90,14 @@ setUploading(false)
 const wCount = workoutDays.filter(Boolean).length
 
 return (
-<div style={{ padding: ‘0 20px 110px’ }}>
+<div style={{ padding: '0 20px 110px' }}>
 {/* Hidden file input */}
 <input
 ref={fileRef}
 type=“file”
 accept=“image/*”
 onChange={handleFileInput}
-style={{ display: ‘none’ }}
+style={{ display: 'none' }}
 />
 
 ```
