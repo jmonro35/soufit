@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth'
-import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, onSnapshot, writeBatch } from 'firebase/firestore'
 import { auth, db } from './firebase.js'
 import { getWeekKey } from './utils.js'
 import { NavBar, Spinner, G, BG, bebas } from './ui.jsx'
@@ -43,7 +43,7 @@ export default function App() {
         if (snap.exists() && snap.data().onboarded) {
           const p = { ...snap.data(), uid }
           setProfile(p)
-          await loadWeeklyData(uid)
+          await loadWeeklyData(uid, p)
         }
       } catch (e) {
         console.error('Error loading profile:', e)
@@ -53,17 +53,52 @@ export default function App() {
     load()
   }, [uid])
 
-  const loadWeeklyData = async (userId) => {
+  const loadWeeklyData = async (userId, p) => {
     const weekKey = getWeekKey()
     try {
+      // Check if user's last known week differs from current week
+      const userSnap = await getDoc(doc(db, 'users', userId))
+      const userData = userSnap.data() || {}
+      const lastWeekKey = userData.lastWeekKey || null
+
+      // If it's a new week, reset member counts in the group
+      if (lastWeekKey && lastWeekKey !== weekKey && p?.groupCode) {
+        await handleWeekReset(userId, p.groupCode, weekKey)
+      }
+
+      // Always save current weekKey so we can detect next reset
+      if (lastWeekKey !== weekKey) {
+        await setDoc(doc(db, 'users', userId), { lastWeekKey: weekKey }, { merge: true })
+      }
+
+      // Load this week's data (will be empty arrays if new week)
       const [wSnap, nSnap] = await Promise.all([
         getDoc(doc(db, 'users', userId, 'weeklyWorkouts', weekKey)),
         getDoc(doc(db, 'users', userId, 'weeklyNutrition', weekKey)),
       ])
       if (wSnap.exists()) setWDays(wSnap.data().days || Array(7).fill(false))
+      else setWDays(Array(7).fill(false))
       if (nSnap.exists()) setNDays(nSnap.data().days || Array(7).fill(false))
+      else setNDays(Array(7).fill(false))
+
     } catch (e) {
       console.error('Error loading weekly data:', e)
+    }
+  }
+
+  // Reset this user's workout/nutrition counts in the group for the new week
+  const handleWeekReset = async (userId, groupCode, newWeekKey) => {
+    try {
+      const batch = writeBatch(db)
+      // Reset this member's weekly counts
+      batch.update(doc(db, 'groups', groupCode, 'members', userId), {
+        workouts: 0,
+        nutrition: 0,
+        weekKey: newWeekKey,
+      })
+      await batch.commit()
+    } catch (e) {
+      console.error('Week reset error:', e)
     }
   }
 
@@ -80,7 +115,7 @@ export default function App() {
   const handleOnboardingComplete = useCallback(async (p) => {
     const fullProfile = { ...p, uid }
     setProfile(fullProfile)
-    await loadWeeklyData(uid)
+    await loadWeeklyData(uid, fullProfile)
   }, [uid])
 
   // Loading screen
