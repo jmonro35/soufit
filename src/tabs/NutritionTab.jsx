@@ -1,21 +1,21 @@
-import { useState, useEffect } from ‘react’
-import { collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc, setDoc, serverTimestamp } from ‘firebase/firestore’
-import { db } from ‘../firebase.js’
-import { getNutritionStatus, getWeekKey } from ‘../utils.js’
-import { Card, Label, G, BORD, MUT, DIM, RED, YEL, mono, bebas } from ‘../ui.jsx’
+import { useState, useEffect } from 'react'
+import { collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../firebase.js'
+import { getNutritionStatus, getWeekKey } from '../utils.js'
+import { Card, Label, G, BORD, MUT, DIM, RED, YEL, mono, bebas } from '../ui.jsx'
 
-const FOOD_API = ‘https://world.openfoodfacts.org/cgi/search.pl’
+const FOOD_API = 'https://world.openfoodfacts.org/cgi/search.pl'
 
 async function searchFood(query) {
 const url = `${FOOD_API}?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments`
 const res  = await fetch(url)
 const data = await res.json()
 return (data.products || [])
-.filter(p => p.product_name && p.nutriments?.[‘energy-kcal_100g’])
+.filter(p => p.product_name && p.nutriments?.['energy-kcal_100g'])
 .map(p => ({
 name:     p.product_name,
-calories: Math.round(p.nutriments[‘energy-kcal_serving’] || p.nutriments[‘energy-kcal_100g’] || 0),
-protein:  Math.round(p.nutriments[‘proteins_serving’]    || p.nutriments[‘proteins_100g’]    || 0),
+calories: Math.round(p.nutriments['energy-kcal_serving'] || p.nutriments['energy-kcal_100g'] || 0),
+protein:  Math.round(p.nutriments['proteins_serving']    || p.nutriments['proteins_100g']    || 0),
 }))
 .filter(p => p.calories > 0)
 .slice(0, 6)
@@ -24,9 +24,9 @@ protein:  Math.round(p.nutriments[‘proteins_serving’]    || p.nutriments[‘
 function TextField({ label, value, onChange, placeholder }) {
 return (
 <div style={{ marginBottom: 12 }}>
-{label && <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 3, textTransform: ‘uppercase’, color: MUT, marginBottom: 6 }}>{label}</div>}
+{label && <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: MUT, marginBottom: 6 }}>{label}</div>}
 <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-style={{ width: ‘100%’, background: ‘#080f08’, border: `1px solid ${BORD}`, borderRadius: 10, padding: ‘12px 14px’, color: ‘#f0f0f0’, fontFamily: mono, fontSize: 13, outline: ‘none’, boxSizing: ‘border-box’ }} />
+style={{ width: '100%', background: '#080f08', border: `1px solid ${BORD}`, borderRadius: 10, padding: '12px 14px', color: '#f0f0f0', fontFamily: mono, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
 </div>
 )
 }
@@ -34,11 +34,11 @@ style={{ width: ‘100%’, background: ‘#080f08’, border: `1px solid ${BORD
 function NumField({ label, value, onChange, placeholder, unit }) {
 return (
 <div style={{ marginBottom: 12 }}>
-{label && <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 3, textTransform: ‘uppercase’, color: MUT, marginBottom: 6 }}>{label}</div>}
-<div style={{ position: ‘relative’ }}>
+{label && <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: MUT, marginBottom: 6 }}>{label}</div>}
+<div style={{ position: 'relative' }}>
 <input inputMode=“decimal” value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-style={{ width: ‘100%’, background: ‘#080f08’, border: `1px solid ${BORD}`, borderRadius: 10, padding: unit ? ‘12px 40px 12px 14px’ : ‘12px 14px’, color: ‘#f0f0f0’, fontFamily: mono, fontSize: 13, outline: ‘none’, boxSizing: ‘border-box’ }} />
-{unit && <span style={{ position: ‘absolute’, right: 12, top: ‘50%’, transform: ‘translateY(-50%)’, fontFamily: mono, fontSize: 11, color: MUT }}>{unit}</span>}
+style={{ width: '100%', background: '#080f08', border: `1px solid ${BORD}`, borderRadius: 10, padding: unit ? '12px 40px 12px 14px' : '12px 14px', color: '#f0f0f0', fontFamily: mono, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+{unit && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontFamily: mono, fontSize: 11, color: MUT }}>{unit}</span>}
 </div>
 </div>
 )
@@ -48,17 +48,17 @@ export default function NutritionTab({ profile, uid, nutritionDays, setNutrition
 const today    = new Date()
 const todayIdx = (today.getDay() + 6) % 7
 const weekKey  = getWeekKey()
-const todayStr = today.toISOString().split(‘T’)[0]
+const todayStr = today.toISOString().split('T')[0]
 
 const [log, setLog]           = useState([])
-const [mode, setMode]         = useState(null) // null | ‘search’ | ‘manual’
-const [searchQ, setSearchQ]   = useState(’’)
+const [mode, setMode]         = useState(null) // null | 'search' | 'manual'
+const [searchQ, setSearchQ]   = useState('')
 const [results, setResults]   = useState([])
 const [searching, setSearching] = useState(false)
-const [searchErr, setSearchErr] = useState(’’)
-const [manualName, setMN]     = useState(’’)
-const [manualCal, setMC]      = useState(’’)
-const [manualProtein, setMP]  = useState(’’)
+const [searchErr, setSearchErr] = useState('')
+const [manualName, setMN]     = useState('')
+const [manualCal, setMC]      = useState('')
+const [manualProtein, setMP]  = useState('')
 const [saving, setSaving]     = useState(false)
 
 const goal         = profile.foodGoal || 2000
@@ -70,9 +70,9 @@ const proteinLogged = log.reduce((a, f) => a + (f.protein || 0), 0)
 // Live food log listener
 useEffect(() => {
 const q = query(
-collection(db, ‘users’, uid, ‘foodLog’),
-where(‘date’, ‘==’, todayStr),
-orderBy(‘createdAt’, ‘asc’)
+collection(db, 'users', uid, 'foodLog'),
+where('date', '==', todayStr),
+orderBy('createdAt', 'asc')
 )
 const unsub = onSnapshot(q, snap => {
 const items = snap.docs.map(d => ({ id: d.id, …d.data() }))
@@ -85,47 +85,47 @@ return () => unsub()
 const saveFood = async (name, calories, protein) => {
 if (!name || !calories) return
 setSaving(true)
-await addDoc(collection(db, ‘users’, uid, ‘foodLog’), {
+await addDoc(collection(db, 'users', uid, 'foodLog'), {
 name,
 calories: Number(calories),
 protein:  Number(protein) || 0,
 date: todayStr,
 createdAt: serverTimestamp(),
-time: today.toLocaleTimeString(‘en-US’, { hour: ‘numeric’, minute: ‘2-digit’ }),
+time: today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
 })
 setMode(null)
-setSearchQ(’’); setResults([]); setSearchErr(’’)
-setMN(’’); setMC(’’); setMP(’’)
+setSearchQ(''); setResults([]); setSearchErr('')
+setMN(''); setMC(''); setMP('')
 setSaving(false)
 }
 
 const handleSearch = async () => {
 if (!searchQ.trim()) return
-setSearching(true); setSearchErr(’’); setResults([])
+setSearching(true); setSearchErr(''); setResults([])
 try {
 const r = await searchFood(searchQ)
-if (r.length === 0) setSearchErr(‘No results. Try a different name or add manually.’)
+if (r.length === 0) setSearchErr('No results. Try a different name or add manually.')
 setResults(r)
 } catch (e) {
-setSearchErr(‘Search failed. Check your connection or add manually.’)
+setSearchErr('Search failed. Check your connection or add manually.')
 }
 setSearching(false)
 }
 
 const markToday = async () => {
-if (status !== ‘good’ || alreadyLogged) return
+if (status !== 'good' || alreadyLogged) return
 const updated = […nutritionDays]
 updated[todayIdx] = true
 setNutritionDays(updated)
-await updateDoc(doc(db, ‘groups’, profile.groupCode, ‘members’, uid), { nutrition: updated.filter(Boolean).length })
-await setDoc(doc(db, ‘users’, uid, ‘weeklyNutrition’, weekKey), { days: updated })
+await updateDoc(doc(db, 'groups', profile.groupCode, 'members', uid), { nutrition: updated.filter(Boolean).length })
+await setDoc(doc(db, 'users', uid, 'weeklyNutrition', weekKey), { days: updated })
 }
 
 return (
-<div style={{ padding: ‘0 20px 110px’ }}>
+<div style={{ padding: '0 20px 110px' }}>
 <div style={{ paddingTop: 52, paddingBottom: 20 }}>
-<div style={{ fontFamily: mono, fontSize: 11, color: G, letterSpacing: 3, textTransform: ‘uppercase’ }}>Today</div>
-<div style={{ fontFamily: bebas, fontSize: 44, color: ‘#f0f0f0’, letterSpacing: 1.5, lineHeight: 1 }}>Nutrition</div>
+<div style={{ fontFamily: mono, fontSize: 11, color: G, letterSpacing: 3, textTransform: 'uppercase' }}>Today</div>
+<div style={{ fontFamily: bebas, fontSize: 44, color: '#f0f0f0', letterSpacing: 1.5, lineHeight: 1 }}>Nutrition</div>
 </div>
 
 ```
