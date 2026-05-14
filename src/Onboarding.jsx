@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, serverTimestamp, collection } from 'firebase/firestore'
 import { db } from './firebase.js'
 import { calcTDEE, calcFoodGoal, getWeekKey } from './utils.js'
 import { Card, Label, Btn, StepDots, BackBtn, G, BORD, MUT, RED, YEL, mono, bebas } from './ui.jsx'
@@ -129,7 +129,7 @@ export default function Onboarding({ uid, onComplete }) {
       // Point recovery code to new uid
       await setDoc(doc(db, 'recoveryCodes', code), { userId: uid })
       onComplete({ ...oldProfile, uid })
-    } catch (e) { setRE('Error recovering. Try again.'); setSaving(false) }
+    } catch (e) { console.error('Recovery error:', e); setRE('Error: ' + (e.message || 'Try again.')); setSaving(false) }
   }
 
   const handleCreate = async () => {
