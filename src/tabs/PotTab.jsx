@@ -1,11 +1,24 @@
 import { Card, Label, G, MUT, DIM, RED, mono, bebas } from '../ui.jsx'
 
 export default function PotTab({ members, profile, uid }) {
-  const sorted   = [...members].sort((a,b) => (b.workouts+b.nutrition)-(a.workouts+a.nutrition))
-  const pot      = members.reduce((a,m) => a+(m.owed||0), 0)
-  const now      = new Date()
-  const weekNum  = Math.ceil(now.getDate() / 7)
+  const sorted    = [...members].sort((a,b) => (b.workouts+b.nutrition)-(a.workouts+a.nutrition))
+  const pot       = members.reduce((a,m) => a+(m.owed||0), 0)
+  const now       = new Date()
+  const weekNum   = Math.ceil(now.getDate() / 7)
   const weeksLeft = Math.max(4 - weekNum, 0)
+
+  // Calculate what each member owes based on missed goals this week
+  const getMissedThisWeek = (m) => {
+    const missedWorkout   = (m.workouts || 0) < 5 && m.weekKey === getCurrentWeekKey() ? 0 : 0
+    return m.owed || 0
+  }
+
+  function getCurrentWeekKey() {
+    const d   = new Date()
+    const mon = new Date(d)
+    mon.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+    return mon.toISOString().split('T')[0]
+  }
 
   return (
     <div style={{ padding: '0 20px 110px' }}>
@@ -16,12 +29,17 @@ export default function PotTab({ members, profile, uid }) {
         <div style={{ fontFamily: bebas, fontSize: 44, color: '#f0f0f0', letterSpacing: 1.5, lineHeight: 1 }}>The Pot</div>
       </div>
 
+      {/* Pot total */}
       <Card highlight style={{ textAlign: 'center', marginBottom: 20 }}>
         <Label color={G} style={{ textAlign: 'center' }}>Current Pot</Label>
         <div style={{ fontFamily: bebas, fontSize: 72, color: '#f0f0f0', letterSpacing: 2, lineHeight: 1 }}>${pot}</div>
         <div style={{ fontFamily: mono, fontSize: 10, color: MUT, marginTop: 8 }}>Winner collects end of month</div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginTop: 16 }}>
-          {[{label:'Members',val:members.length},{label:'Weeks Left',val:weeksLeft},{label:'Max/person',val:`$${4*10}`}].map(s => (
+          {[
+            { label: 'Members',    val: members.length },
+            { label: 'Weeks Left', val: weeksLeft },
+            { label: 'Max/person', val: `$${4*2}` },
+          ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: bebas, fontSize: 26, color: '#f0f0f0' }}>{s.val}</div>
               <div style={{ fontFamily: mono, fontSize: 9, color: MUT, letterSpacing: 1 }}>{s.label}</div>
@@ -30,6 +48,15 @@ export default function PotTab({ members, profile, uid }) {
         </div>
       </Card>
 
+      {/* Week progress note */}
+      <Card style={{ marginBottom: 20 }}>
+        <Label>This week's goals</Label>
+        <div style={{ fontFamily: mono, fontSize: 11, color: '#c0d0c0', lineHeight: 1.7 }}>
+          Counts reset every <span style={{color:G}}>Monday</span>. Miss workout or nutrition goal by end of week → <span style={{color:RED}}>$5 to the pot</span>. Pot total carries forward all month.
+        </div>
+      </Card>
+
+      {/* Leaderboard */}
       <Label>Standings</Label>
       {sorted.length === 0 && (
         <Card>
@@ -48,7 +75,9 @@ export default function PotTab({ members, profile, uid }) {
                 <div style={{ fontFamily: mono, fontSize: 13, color: '#f0f0f0' }}>
                   {m.name}{isMe && <span style={{color:G,fontSize:10}}> ← you</span>}
                 </div>
-                <div style={{ fontFamily: mono, fontSize: 10, color: MUT, marginTop: 2 }}>💪 {m.workouts||0}/5 · 🥗 {m.nutrition||0}/5</div>
+                <div style={{ fontFamily: mono, fontSize: 10, color: MUT, marginTop: 2 }}>
+                  💪 {m.workouts||0}/5 · 🥗 {m.nutrition||0}/5 this week
+                </div>
                 <div style={{ background: '#1a2a1a', borderRadius: 99, height: 3, marginTop: 6, overflow: 'hidden' }}>
                   <div style={{ background: i===0?G:'#166534', width: `${(score/10)*100}%`, height: '100%', borderRadius: 99 }} />
                 </div>

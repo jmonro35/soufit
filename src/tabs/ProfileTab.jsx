@@ -113,8 +113,8 @@ export default function ProfileTab({ profile }) {
         {[
           'Log 5 workouts with photo proof',
           'Hit food goal 5 of 7 days',
-          'Miss workout → $5 to pot',
-          'Miss nutrition → $5 to pot',
+          'Miss workout → $2 to pot',
+          'Nutrition goal — no penalty currently',
           'Over ceiling OR under floor = miss',
           'Photos auto-clear each week',
           'Month winner takes the whole pot',
