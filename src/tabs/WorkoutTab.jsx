@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import { uploadPhoto } from '../cloudinary.js'
@@ -9,13 +9,15 @@ export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }
   const today    = new Date()
   const todayIdx = (today.getDay() + 6) % 7
   const weekKey  = getWeekKey()
+  const fileRef  = useRef(null)
 
-  const [photo, setPhoto]       = useState(null)
-  const [photoBlob, setBlob]    = useState(null)
-  const [selectedType, setType] = useState(null)
-  const [justLogged, setLogged] = useState(false)
+  const [photo, setPhoto]         = useState(null)
+  const [photoBlob, setBlob]      = useState(null)
+  const [selectedType, setType]   = useState(null)
+  const [justLogged, setLogged]   = useState(false)
   const [uploading, setUploading] = useState(false)
   const [recentWorkouts, setRecent] = useState([])
+  const [pasteHint, setPasteHint] = useState(false)
 
   useEffect(() => {
     const q = query(
@@ -27,18 +29,33 @@ export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }
     return () => unsub()
   }, [uid, weekKey])
 
-  const handlePaste = useCallback(e => {
-    const items = e.clipboardData?.items
-    if (!items) return
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        const blob = item.getAsFile()
-        setPhoto(URL.createObjectURL(blob))
-        setBlob(blob)
-        break
+  // Global paste listener — catches paste anywhere on the page
+  useEffect(() => {
+    const handleGlobalPaste = e => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const blob = item.getAsFile()
+          if (blob) {
+            setPhoto(URL.createObjectURL(blob))
+            setBlob(blob)
+          }
+          break
+        }
       }
     }
+    window.addEventListener('paste', handleGlobalPaste)
+    return () => window.removeEventListener('paste', handleGlobalPaste)
   }, [])
+
+  // File input fallback for mobile
+  const handleFileInput = e => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhoto(URL.createObjectURL(file))
+    setBlob(file)
+  }
 
   const handleLog = async () => {
     if (!selectedType) return
@@ -74,6 +91,15 @@ export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }
 
   return (
     <div style={{ padding: '0 20px 110px' }}>
+      {/* Hidden file input */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileInput}
+        style={{ display: 'none' }}
+      />
+
       <div style={{ paddingTop: 52, paddingBottom: 20 }}>
         <div style={{ fontFamily: mono, fontSize: 11, color: G, letterSpacing: 3, textTransform: 'uppercase' }}>Log It</div>
         <div style={{ fontFamily: bebas, fontSize: 44, color: '#f0f0f0', letterSpacing: 1.5, lineHeight: 1 }}>Workout</div>
@@ -102,26 +128,41 @@ export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }
         </Card>
       )}
 
-      {/* Photo paste zone */}
-      <div onPaste={handlePaste} tabIndex={0} style={{ background: photo?'transparent':'#0c150c', border: `2px dashed ${photo?G:'#1e3a1e'}`, borderRadius: 16, minHeight: 160, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: 12, outline: 'none', overflow: 'hidden' }}>
-        {photo
-          ? <img src={photo} alt="Workout proof" style={{ width: '100%', borderRadius: 14, display: 'block' }} />
-          : <>
-              <span style={{ fontSize: 32, marginBottom: 10 }}>📸</span>
-              <div style={{ fontFamily: mono, fontSize: 12, color: G }}>Tap then paste your photo</div>
-              <div style={{ fontFamily: mono, fontSize: 10, color: MUT, marginTop: 4 }}>No camera access · proof saves to group</div>
-            </>
-        }
-      </div>
-      {photo && (
-        <button onClick={() => { setPhoto(null); setBlob(null) }} style={{ background: 'none', border: 'none', color: MUT, fontFamily: mono, fontSize: 10, cursor: 'pointer', marginBottom: 10 }}>✕ Remove photo</button>
+      {/* Photo zone */}
+      {photo ? (
+        <div style={{ marginBottom: 12, position: 'relative' }}>
+          <img src={photo} alt="Workout proof" style={{ width: '100%', borderRadius: 14, display: 'block' }} />
+          <button onClick={() => { setPhoto(null); setBlob(null) }}
+            style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#f0f0f0', fontFamily: mono, fontSize: 11, cursor: 'pointer' }}>
+            ✕ Remove
+          </button>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 12 }}>
+          {/* Primary: file picker (works on all mobile) */}
+          <button
+            onClick={() => fileRef.current?.click()}
+            style={{ width: '100%', background: '#0c150c', border: `2px dashed ${BORD}`, borderRadius: 16, padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+          >
+            <span style={{ fontSize: 32 }}>📸</span>
+            <div style={{ fontFamily: bebas, fontSize: 20, color: G, letterSpacing: 1 }}>ADD PHOTO PROOF</div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: MUT }}>Tap to choose from your photo library</div>
+          </button>
+          {/* Secondary: paste hint for desktop */}
+          <div style={{ fontFamily: mono, fontSize: 10, color: DIM, textAlign: 'center', marginTop: 8 }}>
+            On desktop you can also copy a photo and press Ctrl+V anywhere on this page
+          </div>
+        </div>
       )}
 
       {/* Workout type */}
       <Label>Workout type</Label>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
         {['Weights','Cardio','HIIT','Sports','Yoga','Other'].map(t => (
-          <button key={t} onClick={() => setType(t)} style={{ background: selectedType===t?'#0f2a0f':'#0c150c', border: `1px solid ${selectedType===t?G:'#1e3a1e'}`, borderRadius: 10, padding: '13px', color: selectedType===t?G:'#f0f0f0', fontFamily: mono, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>{t}</button>
+          <button key={t} onClick={() => setType(t)}
+            style={{ background: selectedType===t?'#0f2a0f':'#0c150c', border: `1px solid ${selectedType===t?G:'#1e3a1e'}`, borderRadius: 10, padding: '13px', color: selectedType===t?G:'#f0f0f0', fontFamily: mono, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>
+            {t}
+          </button>
         ))}
       </div>
 
@@ -129,7 +170,6 @@ export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }
         {uploading ? 'UPLOADING PHOTO…' : 'LOG WORKOUT ✓'}
       </Btn>
 
-      {/* Recent */}
       <Label style={{ marginTop: 24 }}>This Week</Label>
       {recentWorkouts.length === 0
         ? <div style={{ fontFamily: mono, fontSize: 11, color: DIM, textAlign: 'center', paddingTop: 12 }}>No workouts logged yet this week</div>
@@ -138,7 +178,7 @@ export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: mono, fontSize: 13, color: '#f0f0f0' }}>{w.type}</div>
-                <div style={{ fontFamily: mono, fontSize: 10, color: MUT, marginTop: 3 }}>{w.day}{w.photoUrl ? ' · 📸 proof uploaded' : ''}</div>
+                <div style={{ fontFamily: mono, fontSize: 10, color: MUT, marginTop: 3 }}>{w.day}{w.photoUrl ? ' · 📸 proof uploaded' : ' · no photo'}</div>
               </div>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: G, marginTop: 4 }} />
             </div>
@@ -149,3 +189,4 @@ export default function WorkoutTab({ profile, uid, workoutDays, setWorkoutDays }
     </div>
   )
 }
+
