@@ -110,7 +110,7 @@ export default function Onboarding({ uid, onComplete }) {
   const handleRecover = async () => {
     setSaving(true); setRE('')
     try {
-      const code = recoveryInput.trim().toUpperCase()
+      const code = recoveryInput.trim().toUpperCase().replace(/\s+/g, '')
       const snap = await getDoc(doc(db, 'recoveryCodes', code))
       if (!snap.exists()) { setRE('Code not found. Check for typos.'); setSaving(false); return }
       const { userId } = snap.data()
